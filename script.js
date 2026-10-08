@@ -1,0 +1,94 @@
+const WHATSAPP_NUMBER = "962790780914";
+
+const products = [
+ {id:1,name:"AMO Monogram Tote",category:"tote",price:15,old:null,
+  images:["images/monogram-cream.jpg","images/monogram-tan.jpg"],colors:["Cream","Tan"]},
+ {id:2,name:"AMO Croc Elegance Set",category:"croc",price:15,old:null,
+  images:["images/croc-black-set.jpg","images/croc-brown-set.jpg"],colors:["Black","Brown"]},
+ {id:3,name:"AMO Classic Frame",category:"classic",price:15,old:null,
+  images:["images/yin-simon-brown.jpg","images/yin-simon-white.jpg"],colors:["Brown","White"]},
+ {id:4,name:"AMO Croc Collection",category:"croc",price:15,old:null,
+  images:["images/croc-black-collection.jpg","images/croc-brown-collection.jpg"],colors:["Black","Brown"]},
+ {id:5,name:"AMO Rosé Tweed",category:"sets",price:15,old:null,
+  images:["images/rose-tweed-set.jpg"],colors:["Rosé"]},
+];
+
+let cart = [];
+const grid=document.getElementById("productGrid"), count=document.getElementById("productCount");
+
+function money(n){return n.toFixed(2)+" JD"}
+
+function render(filter="all"){
+ const list=products.filter(p=>filter==="all"||p.category===filter);
+ count.textContent=list.length+" موديلات";
+ grid.innerHTML=list.map(p=>`
+  <article class="product">
+   <div class="product-img" onclick="openProduct(${p.id})">
+    <img src="${p.images[0]}" alt="${p.name}">
+    <span class="model-badge">${p.images.length} ${p.images.length===1?"صورة":"صور"}</span>
+   </div>
+   <h3>${p.name}</h3>
+   <p class="price"><strong>${money(p.price)}</strong></p>
+   <small class="per">متوفر ${p.colors.join(" • ")}</small>
+   <button class="add" onclick="addToCart(${p.id},0)">أضيفي للسلة</button>
+  </article>`).join("");
+}
+
+function openProduct(id){
+ const p=products.find(x=>x.id===id);
+ document.getElementById("productModal").classList.add("show");
+ document.getElementById("modalTitle").textContent=p.name;
+ document.getElementById("modalPrice").textContent=money(p.price);
+ document.getElementById("modalGallery").innerHTML=p.images.map((im,i)=>`
+   <div class="gallery-item"><img src="${im}" alt="${p.name} ${i+1}"></div>`).join("");
+ document.getElementById("modalColors").innerHTML=p.colors.map((c,i)=>`
+   <button class="color-btn ${i===0?"active":""}" onclick="selectColor(${id},${i},this)">${c}</button>`).join("");
+ document.getElementById("modalAdd").onclick=()=>{addToCart(id,selectedColor[id]||0);document.getElementById("productModal").classList.remove("show")};
+}
+let selectedColor={};
+function selectColor(id,i,el){selectedColor[id]=i;el.parentElement.querySelectorAll(".color-btn").forEach(x=>x.classList.remove("active"));el.classList.add("active")}
+
+function addToCart(id,colorIndex=0){
+ const p=products.find(i=>i.id===id);
+ const color=p.colors[colorIndex]||p.colors[0];
+ const key=id+"-"+color;
+ const x=cart.find(i=>i.key===key);
+ x?x.qty++:cart.push({key,id,color,qty:1});
+ renderCart();openCart();
+}
+function renderCart(){
+ document.getElementById("cartCount").textContent=cart.reduce((s,i)=>s+i.qty,0);
+ const box=document.getElementById("cartItems");
+ if(!cart.length){box.innerHTML="<p>السلة فارغة.</p>";document.getElementById("cartTotal").textContent="0.00 JD";return}
+ box.innerHTML=cart.map(i=>{const p=products.find(x=>x.id===i.id);return `<div class="cart-item"><img src="${p.images[0]}" alt=""><div><strong>${p.name}</strong><br><small>اللون: ${i.color}</small><br>${money(p.price)} × ${i.qty}<div class="qty"><button onclick="changeQty('${i.key}',-1)">−</button> <button onclick="changeQty('${i.key}',1)">+</button></div></div></div>`}).join("");
+ document.getElementById("cartTotal").textContent=money(cart.reduce((s,i)=>s+products.find(p=>p.id===i.id).price*i.qty,0));
+}
+function changeQty(key,n){const x=cart.find(i=>i.key===key);if(!x)return;x.qty+=n;if(x.qty<=0)cart=cart.filter(i=>i.key!==key);renderCart()}
+
+function openCart(){document.getElementById("cartPanel").classList.add("open")}
+function closeCart(){document.getElementById("cartPanel").classList.remove("open")}
+function openModal(){
+ if(!cart.length)return alert("أضيفي منتجًا للسلة أولاً.");
+ document.getElementById("orderModal").classList.add("show");
+}
+function sendOrder(){
+ let name=document.getElementById("name").value.trim(), phone=document.getElementById("phone").value.trim(), area=document.getElementById("area").value.trim(), address=document.getElementById("address").value.trim();
+ if(!name||!phone||!area){alert("يرجى تعبئة الاسم ورقم الهاتف والمنطقة.");return}
+ let lines=cart.map(i=>{let p=products.find(x=>x.id===i.id);return `• ${p.name} | اللون: ${i.color} | الكمية: ${i.qty} | ${money(p.price*i.qty)}`}).join("\n");
+ let total=cart.reduce((s,i)=>s+products.find(p=>p.id===i.id).price*i.qty,0);
+ let msg=`مرحباً AMO 👋\nأريد عمل طلب جديد:\n\n${lines}\n\nالإجمالي: ${money(total)}\n\nالاسم: ${name}\nرقم الهاتف: ${phone}\nالمنطقة: ${area}\nالعنوان: ${address}`;
+ window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(msg)}`,"_blank");
+}
+render();renderCart();
+
+document.getElementById("cartBtn").onclick=openCart;
+document.getElementById("closeCart").onclick=closeCart;
+document.getElementById("checkoutBtn").onclick=openModal;
+document.getElementById("closeModal").onclick=()=>document.getElementById("orderModal").classList.remove("show");
+document.getElementById("sendWhatsApp").onclick=sendOrder;
+document.getElementById("menuBtn").onclick=()=>{document.getElementById("sideMenu").classList.add("open");document.getElementById("overlay").classList.add("show")};
+document.getElementById("closeMenu").onclick=()=>{document.getElementById("sideMenu").classList.remove("open");document.getElementById("overlay").classList.remove("show")};
+document.getElementById("overlay").onclick=()=>{document.getElementById("sideMenu").classList.remove("open");document.getElementById("overlay").classList.remove("show")};
+document.getElementById("filterBtn").onclick=()=>document.getElementById("filters").scrollIntoView({behavior:"smooth"});
+document.querySelectorAll(".filters button").forEach(b=>b.onclick=()=>{document.querySelectorAll(".filters button").forEach(x=>x.classList.remove("active"));b.classList.add("active");render(b.dataset.filter)});
+document.getElementById("whatsappBtn").onclick=()=>window.open(`https://wa.me/${WHATSAPP_NUMBER}`,"_blank");
